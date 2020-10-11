@@ -13,6 +13,9 @@ trait CRDTGetValueLaws[A, B] {
 
   def cleanPreservesValue(x: A, t: VectorClock): Prop =
     t < V.getUniqueTime(x) ==> (V.getUniqueValue(x) === V.getUniqueValue(S.clean(x, t)))
+
+  def cleanPreservesValues(x: A, t: VectorClock): Prop =
+    V.getTimes(x).forall(t < _) ==> (V.getValues(x) === V.getValues(S.clean(x, t)))
 }
 
 object CRDTGetValueLaws {

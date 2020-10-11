@@ -17,7 +17,8 @@ trait CRDTGetValueTests[A, B] extends Laws {
       def parents = Seq.empty
       def props =
         Seq(
-          "cleanPreservesValue" -> forAll(laws.cleanPreservesValue _)
+          "cleanPreservesValue" -> forAll(laws.cleanPreservesValue _),
+          "cleanPreservesValues" -> forAll(laws.cleanPreservesValues _)
         )
     }
 }
