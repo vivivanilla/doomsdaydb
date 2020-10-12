@@ -33,6 +33,8 @@ object LWWRegisterState {
         LWWRegisterState(state.values.filterNot { case (clock, _) => clock == undoTime })
 
       override def eqv(x: LWWRegisterState[T], y: LWWRegisterState[T]): Boolean = x.values === y.values
+
+      override def empty = LWWRegisterState[T](Map.empty)
     }
 
   implicit def applyMsg[T]: CRDTApplyMsg[LWWRegisterState[T], LWWRegisterMessage[T]] =
@@ -72,6 +74,27 @@ object LWWRegisterState {
         state.values.filter {
           case (timestamp, _) => !state.values.exists { case (otherTS, _) => otherTS > timestamp }
         }.keySet
+    }
+
+  implicit def op[T]: CRDTOperation[LWWRegisterState[T], LWWRegisterOp[T], LWWRegisterMessage[T]] =
+    new CRDTOperation[LWWRegisterState[T], LWWRegisterOp[T], LWWRegisterMessage[T]] {
+
+      override def messages(
+          nodeId: String,
+          time: VectorClock,
+          state: LWWRegisterState[T],
+          op: LWWRegisterOp[T]
+      ): Seq[LWWRegisterMessage[T]] =
+        op match {
+          case LWWRegisterOp.Set(value) => Seq(Update(time, value))
+        }
+
+      override def newState(
+          nodeId: String,
+          time: VectorClock,
+          state: LWWRegisterState[T],
+          op: LWWRegisterOp[T]
+      ): LWWRegisterState[T] = state
 
     }
 }

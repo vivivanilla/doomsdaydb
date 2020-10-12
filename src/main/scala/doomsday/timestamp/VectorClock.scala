@@ -18,6 +18,8 @@ case class VectorClock(time: Map[String, Long]) {
         that.time.get(k).exists(v1 <= _)
     }
 
+  def inc(nodeId: String) =
+    VectorClock(time + (nodeId -> (time.getOrElse(nodeId, 0L) + 1)))
 }
 
 object VectorClock {

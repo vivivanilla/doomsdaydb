@@ -4,7 +4,11 @@ import cats.kernel.Semilattice
 import doomsday.timestamp.VectorClock
 import cats.kernel.Eq
 
+/**
+  * Represents a CRDT state at some node
+  */
 trait CRDTState[StateT] extends Semilattice[StateT] with Eq[StateT] {
+  def empty: StateT
   def clean(state: StateT, acknowledgedTime: VectorClock): StateT
   def rollback(state: StateT, undoTime: VectorClock): StateT
 }
@@ -19,4 +23,9 @@ trait CRDTGetValue[StateT, ValT] {
   def getValues(state: StateT): Set[ValT]
   def getUniqueTime(state: StateT): VectorClock
   def getTimes(state: StateT): Set[VectorClock]
+}
+
+trait CRDTOperation[StateT, OpT, MsgT] {
+  def messages(nodeId: String, time: VectorClock, state: StateT, op: OpT): Seq[MsgT]
+  def newState(nodeId: String, time: VectorClock, state: StateT, op: OpT): StateT
 }

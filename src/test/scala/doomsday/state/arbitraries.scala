@@ -1,9 +1,7 @@
 package doomsday.state
 
 import org.scalacheck.{Arbitrary, Gen}
-import cats.kernel.Eq
 import doomsday.timestamp.VectorClock
-import cats.implicits._
 import doomsday.timestamp.arbitraries._
 
 object arbitraries {
@@ -19,8 +17,6 @@ object arbitraries {
         case (state, timestamp) => state.update(timestamp, valueForVectorClock(timestamp))
       }
     )
-
-  implicit def eqVectorClock: Eq[LWWRegisterState[Int]] = LWWRegisterState.state[Int]
 
   implicit def arbFun[A](implicit arb: Arbitrary[A]): Arbitrary[A => A] = Arbitrary(arb.arbitrary map ((_: A) => _))
 }
