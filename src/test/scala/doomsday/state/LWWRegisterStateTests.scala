@@ -10,7 +10,7 @@ class LWWRegisterStateTests extends AnyFunSuite with FunSuiteDiscipline with Che
 
   implicit override val generatorDrivenConfig =
     // If test LWWRegisterState.CRDTGetValueLaws fails, increase this
-    PropertyCheckConfiguration(maxDiscardedFactor = 10)
+    PropertyCheckConfiguration(maxDiscardedFactor = 20)
 
   checkAll("LWWRegisterState.CRDTStateLaws", CRDTStateLaws[LWWRegisterState[Int]].crdtState)
 
