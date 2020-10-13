@@ -26,6 +26,6 @@ trait CRDTGetValue[StateT, ValT] {
 }
 
 trait CRDTOperation[StateT, OpT, MsgT] {
-  def messages(nodeId: String, time: VectorClock, state: StateT, op: OpT): Seq[MsgT]
-  def newState(nodeId: String, time: VectorClock, state: StateT, op: OpT): StateT
+  def messages(nodeId: String, nodeClock: Long, state: StateT, op: OpT): Seq[MsgT]
+  def newState(nodeId: String, nodeClock: Long, state: StateT, op: OpT): StateT
 }

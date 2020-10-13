@@ -10,7 +10,7 @@ import org.scalacheck.Gen
 import doomsday.state.CRDTState
 import doomsday.state.CRDTOperation
 
-case class CRDTLaws[StateT, MsgT, OpT, ValT]()(implicit
+case class IndependentNodesTest[StateT, MsgT, OpT, ValT]()(implicit
     S: CRDTState[StateT],
     A: CRDTApplyMsg[StateT, MsgT],
     V: CRDTGetValue[StateT, ValT],
@@ -51,11 +51,11 @@ case class CRDTLaws[StateT, MsgT, OpT, ValT]()(implicit
   def genInterleaveMsgSeqs(sequences: Seq[Seq[MsgT]]): Gen[Seq[MsgT]] =
     sequences.filterNot(_.isEmpty) match {
       case Nil => Gen.const(Seq.empty)
-      case sequences =>
+      case seqs =>
         for {
-          seqId <- Gen.choose(0, sequences.size - 1)
-          tail <- genInterleaveMsgSeqs(sequences.updated(seqId, sequences(seqId).tail))
-        } yield sequences(seqId).head +: tail
+          seqId <- Gen.choose(0, seqs.size - 1)
+          tail <- genInterleaveMsgSeqs(seqs.updated(seqId, seqs(seqId).tail))
+        } yield seqs(seqId).head +: tail
     }
 
   def genNode: Gen[Node[StateT, OpT, MsgT]] =
@@ -70,15 +70,6 @@ case class CRDTLaws[StateT, MsgT, OpT, ValT]()(implicit
       )
     )
 
-  private def operationChangesValues(x: Node[StateT, OpT, MsgT], op: OpT) =
-    V.getValues(x.messages(op).foldLeft(x.newState(op).state) { case (state, msg) => A.update(state, msg) }) =!= V
-      .getValues(x.state)
-
-  private def operationSetsNewTime(x: Node[StateT, OpT, MsgT], op: OpT) =
-    V.getTimes(x.messages(op).foldLeft(x.newState(op).state) { case (state, msg) => A.update(state, msg) }) === Set(
-      x.clock.inc(x.nodeId)
-    )
-
   private def messageSequencesConverge(x: StateT, msgs: Seq[Seq[MsgT]]) = {
     val values = msgs.map(_.foldLeft(x) { case (state, msg) => A.update(state, msg) }).map(V.getValues _)
     values.forall(_ === values.head)
@@ -86,14 +77,12 @@ case class CRDTLaws[StateT, MsgT, OpT, ValT]()(implicit
 
   def crdt: RuleSet =
     new RuleSet {
-      override def name: String = "CRDTgetValue"
+      override def name: String = "IndependentNodesModel"
       def bases: Seq[(String, Laws#RuleSet)] = Seq.empty
       def parents = Seq.empty
       def props =
         Seq(
-          "operationChangesValues" -> forAll(operationChangesValues _),
-          "operationSetsNewTime" -> forAll(operationSetsNewTime _),
-          "messageSequencesConverge" -> forAll(messageSequencesConverge _)
+          "convergence after all messages are processed" -> forAll(messageSequencesConverge _)
         )
     }
 }

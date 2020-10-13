@@ -6,6 +6,7 @@ import doomsday.message.Update
 import cats.implicits._
 import cats.kernel.Eq
 import alleycats.Empty
+import cats.kernel.Semilattice
 
 case class LWWRegisterState[T](values: Map[VectorClock, T]) {
   def process(msg: LWWRegisterMessage[T]): LWWRegisterState[T] =
@@ -18,6 +19,8 @@ case class LWWRegisterState[T](values: Map[VectorClock, T]) {
   def merge(that: LWWRegisterState[T]) = LWWRegisterState(values ++ that.values)
 
   def getValue = values.get(values.keySet.max(VectorClock.lexicalOrderNodePriorityOrder.toOrdering))
+
+  def getTime = values.map(_._1).reduceOption(Semilattice[VectorClock].combine).getOrElse(VectorClock.empty)
 }
 
 object LWWRegisterState {
@@ -81,17 +84,17 @@ object LWWRegisterState {
 
       override def messages(
           nodeId: String,
-          time: VectorClock,
+          nodeTime: Long,
           state: LWWRegisterState[T],
           op: LWWRegisterOp[T]
       ): Seq[LWWRegisterMessage[T]] =
         op match {
-          case LWWRegisterOp.Set(value) => Seq(Update(time, value))
+          case LWWRegisterOp.Set(value) => Seq(Update(state.getTime.inc(nodeId), value))
         }
 
       override def newState(
           nodeId: String,
-          time: VectorClock,
+          nodeTime: Long,
           state: LWWRegisterState[T],
           op: LWWRegisterOp[T]
       ): LWWRegisterState[T] = state

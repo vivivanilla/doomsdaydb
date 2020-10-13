@@ -1,18 +1,21 @@
 package doomsday.node
 
-import doomsday.timestamp.VectorClock
 import doomsday.state.CRDTState
 import doomsday.state.CRDTOperation
+import doomsday.state.CRDTApplyMsg
 
-case class Node[StateT: CRDTState, OpT, MsgT](nodeId: String, clock: VectorClock, state: StateT)(implicit
+case class Node[StateT: CRDTState, OpT, MsgT](nodeId: String, nodeClock: Long, state: StateT)(implicit
     ops: CRDTOperation[StateT, OpT, MsgT]
 ) {
   def newState(op: OpT): Node[StateT, OpT, MsgT] =
-    Node(nodeId, clock.inc(nodeId), ops.newState(nodeId, clock.inc(nodeId), state, op))
-  def messages(op: OpT): Seq[MsgT] = ops.messages(nodeId, clock.inc(nodeId), state, op)
+    Node(nodeId, nodeClock + 1, ops.newState(nodeId, nodeClock + 1, state, op))
+  def messages(op: OpT): Seq[MsgT] = ops.messages(nodeId, nodeClock + 1, state, op)
+
+  def processMsg(msg: MsgT)(implicit a: CRDTApplyMsg[StateT, MsgT]): Node[StateT, OpT, MsgT] =
+    Node(nodeId, nodeClock + 1, a.update(state, msg))
 }
 
 object Node {
   def empty[StateT, OpT, MsgT](nodeId: String)(implicit st: CRDTState[StateT], op: CRDTOperation[StateT, OpT, MsgT]) =
-    Node(nodeId, VectorClock.empty, st.empty)
+    Node(nodeId, 1, st.empty)
 }
