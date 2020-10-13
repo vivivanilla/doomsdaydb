@@ -4,25 +4,32 @@ import doomsday.timestamp.VectorClock
 import cats.implicits._
 import org.scalacheck.Prop._
 import cats.kernel.Eq
-import org.scalacheck.Prop
+import org.typelevel.discipline.Laws
+import org.scalacheck.Arbitrary
+import doomsday.timestamp.arbitraries._
 
-trait CRDTGetValueLaws[A, B] {
-  implicit def eqB: Eq[B]
-  implicit def S: CRDTState[A]
-  implicit def V: CRDTGetValue[A, B]
+case class CRDTGetValueLaws[StateT, ValT]()(implicit
+    S: CRDTState[StateT],
+    V: CRDTGetValue[StateT, ValT],
+    eqB: Eq[ValT],
+    arbState: Arbitrary[StateT]
+) extends Laws {
 
-  def cleanPreservesValue(x: A, t: VectorClock): Prop =
+  private def cleanPreservesValue(x: StateT, t: VectorClock) =
     t < V.getUniqueTime(x) ==> (V.getUniqueValue(x) === V.getUniqueValue(S.clean(x, t)))
 
-  def cleanPreservesValues(x: A, t: VectorClock): Prop =
+  private def cleanPreservesValues(x: StateT, t: VectorClock) =
     V.getTimes(x).forall(t < _) ==> (V.getValues(x) === V.getValues(S.clean(x, t)))
-}
 
-object CRDTGetValueLaws {
-  def apply[A, B](implicit s: CRDTState[A], v: CRDTGetValue[A, B], eqb: Eq[B]): CRDTGetValueLaws[A, B] =
-    new CRDTGetValueLaws[A, B] {
-      def S = s
-      def V = v
-      def eqB = eqb
+  def crdtGetValue: RuleSet =
+    new RuleSet {
+      override def name: String = "CRDTgetValue"
+      def bases: Seq[(String, Laws#RuleSet)] = Seq.empty
+      def parents = Seq.empty
+      def props =
+        Seq(
+          "cleanPreservesValue" -> forAll(cleanPreservesValue _),
+          "cleanPreservesValues" -> forAll(cleanPreservesValues _)
+        )
     }
 }
